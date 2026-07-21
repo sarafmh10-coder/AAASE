@@ -1,0 +1,131 @@
+from typing import TypedDict
+from langgraph.graph import StateGraph, END
+
+
+
+class ReportState(TypedDict):
+    topic: str
+    research_data: str
+    summary_data: str
+    draft_report: str
+    final_report: str
+    review_status: str
+    revision_count: int
+
+def manager_agent(state):
+    print("Manager: Starting workflow...")
+    return {}
+
+
+def research_agent(state):
+    topic = state["topic"]
+
+    research = f"""
+Research about: {topic}
+
+- Multi-Agent systems consist of multiple intelligent agents.
+- Each agent performs a specific task.
+- Agents collaborate to solve complex problems.
+- Multi-Agent systems improve automation and efficiency.
+"""
+
+    return {"research_data": research}
+
+
+
+def summarization_agent(state):
+
+    summary = """
+• Multiple agents cooperate together.
+• Each agent has a specific responsibility.
+• Collaboration improves productivity.
+• Multi-Agent systems are widely used in AI.
+"""
+
+    return {"summary_data": summary}
+
+
+
+def writing_agent(state):
+
+    report = f"""
+TITLE
+{state["topic"]}
+
+INTRODUCTION
+Multi-Agent AI systems consist of multiple intelligent agents working together.
+
+MAIN DISCUSSION
+{state["summary_data"]}
+
+CONCLUSION
+Multi-Agent systems improve efficiency by dividing work among specialized agents.
+"""
+
+    return {"draft_report": report}
+
+
+
+def review_agent(state):
+
+    if len(state["draft_report"]) > 100:
+        return {
+            "review_status": "approved",
+            "final_report": state["draft_report"]
+        }
+
+    return {
+        "review_status": "revise",
+        "draft_report": state["draft_report"] + "\nAdditional improvements added.",
+        "revision_count": state["revision_count"] + 1
+    }
+
+
+
+def review_router(state):
+
+    if state["review_status"] == "approved":
+        return END
+
+    if state["revision_count"] >= 2:
+        state["final_report"] = state["draft_report"]
+        return END
+
+    return "writer"
+
+
+
+
+workflow = StateGraph(ReportState)
+
+workflow.add_node("manager", manager_agent)
+workflow.add_node("researcher", research_agent)
+workflow.add_node("summarizer", summarization_agent)
+workflow.add_node("writer", writing_agent)
+workflow.add_node("reviewer", review_agent)
+
+workflow.set_entry_point("manager")
+
+workflow.add_edge("manager", "researcher")
+workflow.add_edge("researcher", "summarizer")
+workflow.add_edge("summarizer", "writer")
+workflow.add_edge("writer", "reviewer")
+
+workflow.add_conditional_edges(
+    "reviewer",
+    review_router
+)
+
+app = workflow.compile()
+
+
+
+initial_state = {
+    "topic": "The Future of Multi-Agent AI Systems",
+    "revision_count": 0
+}
+
+result = app.invoke(initial_state)
+
+print("\n===== FINAL REPORT =====\n")
+print(result["final_report"])
